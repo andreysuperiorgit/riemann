@@ -215,12 +215,12 @@ const FM='ui-monospace, SF Mono, Menlo, monospace';
 let U=0, T=T0, playing=true, last=performance.now();
 let zoomGain=1, countOverride=null, primesK=null; // set only by the video capture
 const DURATION=28;
-const tOfU=u=>T0+(T_MAX-T0)*Math.pow(u,1.6);
+const tOfU=u=>T0+(T_MAX-T0)*Math.pow(Math.max(0,u),1.6);
 const uOfT=t=>Math.pow(Math.max(0,(t-T0)/(T_MAX-T0)),1/1.6);
 const zerosBelow=t=>{let k=0;while(k<zeros.length&&zeros[k]<=t)k++;return k};
 // zoom-in pulse around the first zeros, fading out as they get dense
 function pulse(t){let p=0;for(const g of zeros){if(g>66)break;const a=Math.min(1,(66-g)/44),d=(t-g)/1.5;p=Math.max(p,a*Math.exp(-d*d))}return p}
-function advance(dt){const slow=1-.82*pulse(T);U=Math.min(1,U+dt/DURATION*slow);T=tOfU(U);if(U>=1)playing=false}
+function advance(dt){const slow=1-.82*pulse(T);U=Math.max(0,Math.min(1,U+Math.max(0,dt)/DURATION*slow));T=tOfU(U);if(U>=1)playing=false}
 
 // ---------- spiral ----------
 function drawSpiral(){
@@ -392,7 +392,7 @@ function drawAll(){
 }
 $('s-check').innerHTML=`Whole strip up to t = ${T_MAX}: <b class="g">${N_STRIP} zeros</b> counted with the argument principle. Found on the line: <b class="g">${zeros.length}</b>. The two numbers match, so none is anywhere else.`;
 $('how').innerHTML=`First zeros found on this page: <b>${zeros.slice(0,5).map(z=>z.toFixed(6)).join(', ')}</b>… Check them against any published table.`;
-function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;
+function loop(now){const dt=Math.max(0,Math.min(.05,(now-last)/1000));last=now;
   if(playing){advance(dt);if(autoTour){const s=tourScene(U);if(s!==scene)setScene(s)}}
   drawAll();requestAnimationFrame(loop)}
 $('play').onclick=()=>{if(U>=1){U=0;T=T0;autoTour=true;setScene('L')}playing=!playing};
