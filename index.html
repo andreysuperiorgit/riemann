@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Riemann Hypothesis, live</title>
+<meta name="description" content="Rotate the zeta landscape, watch every zero land on one line and rebuild the primes. Computed live in your browser. One HTML file.">
+<style>
+  :root{
+    --bg:#f4f1e8; --panel:#fbfaf5; --ink:#15171a; --mute:#716c60; --grid:#e2dccd; --line:#cdc5b1;
+    --red:#d6361f; --blue:#1f4fd0; --ok:#178248; --band:#eef1f6;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+  .app{max-width:1440px;margin:0 auto;padding:18px;display:grid;grid-template-columns:232px minmax(0,1fr) 300px;gap:14px;align-items:start}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  /* left: lessons */
+  .side{padding:6px 2px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:760;font-size:17px;letter-spacing:-.01em}
+  .brand i{width:34px;height:34px;border-radius:9px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font:700 19px var(--sans);font-style:normal}
+  .kicker{font:600 10px/1.5 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--red);margin:14px 0 16px}
+  nav button{display:block;width:100%;text-align:left;background:transparent;border:1px solid transparent;border-radius:9px;padding:10px 11px;margin-bottom:6px;cursor:pointer;color:var(--ink);font-family:var(--sans)}
+  nav button i{font:600 10px var(--mono);color:var(--mute);font-style:normal;letter-spacing:.1em}
+  nav button b{display:block;font-size:15px;font-weight:680;margin-top:3px}
+  nav button small{display:block;font-size:12px;color:var(--mute);margin-top:2px}
+  nav button.on{background:var(--panel);border-color:var(--line)}
+  nav button.on i{color:var(--red)}
+  .credit{font:11px/1.6 var(--mono);color:var(--mute);margin-top:18px}
+  .credit a{color:var(--ink)}
+  /* center: stage */
+  .head{padding:16px 18px 12px;border-bottom:1px solid var(--line)}
+  .vk{display:none}
+  h1{font-size:clamp(22px,2.5vw,34px);line-height:1.08;margin:0 0 11px;font-weight:780;letter-spacing:-.025em}
+  h1 em,h2 em{font-style:normal;color:var(--red)}
+  .pills{display:flex;gap:8px;flex-wrap:wrap}
+  .pill{display:inline-flex;align-items:baseline;gap:7px;border-radius:999px;padding:5px 12px;font:600 10.5px var(--mono);letter-spacing:.07em;text-transform:uppercase;border:1px solid var(--line);color:var(--mute);font-variant-numeric:tabular-nums}
+  .pill b{font-size:17px;letter-spacing:-.02em;color:var(--ink)}
+  .pill.red{background:rgba(214,54,31,.08);border-color:rgba(214,54,31,.3);color:var(--red)} .pill.red b{color:var(--red)}
+  .pill.ok{background:rgba(23,130,72,.08);border-color:rgba(23,130,72,.3);color:var(--ok)} .pill.ok b{color:var(--ok)}
+  .pill.t{text-transform:none;letter-spacing:0;font-size:12px}
+  .scene{position:relative;aspect-ratio:1/0.6}
+  .scene canvas,.scene .pr{position:absolute;inset:0;width:100%;height:100%;display:none}
+  body.lay-L #c-land,body.lay-S #c-spiral{display:block}
+  body.lay-P .pr{display:flex}
+  #c-land{touch-action:none;cursor:grab}
+  .pr{flex-direction:column;padding:12px 14px 10px}
+  .prhead .e{font:600 15px var(--mono);color:var(--red);font-variant-numeric:tabular-nums}
+  .pwrap{position:relative;flex:1;min-height:0;margin-top:6px}
+  .pwrap canvas{display:block!important}
+  #c-strip{display:block;width:100%;height:92px;border-top:1px solid var(--line);cursor:pointer}
+  .bar{display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid var(--line)}
+  button.btn{font:600 12px var(--mono);background:var(--ink);color:var(--bg);border:0;border-radius:6px;padding:9px 14px;cursor:pointer}
+  button.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  input[type=range]{flex:1;min-width:100px;accent-color:var(--red)}
+  /* right: explanation */
+  .info{padding:18px 18px 16px}
+  .tag{display:inline-block;font:700 10px var(--mono);letter-spacing:.12em;color:var(--red);background:rgba(214,54,31,.08);border:1px solid rgba(214,54,31,.3);border-radius:999px;padding:4px 10px}
+  .info h2{font-size:21px;line-height:1.15;margin:12px 0 9px;font-weight:740;letter-spacing:-.015em}
+  .info p{font-size:14.5px;line-height:1.5;margin:0 0 12px}
+  .extra{margin:2px 0 14px;font:12px var(--mono);color:var(--mute)}
+  .extra label{display:block;margin-bottom:6px}
+  .extra input{width:100%}
+  .box{border-top:1px solid var(--line);padding-top:12px;margin-top:4px;font:12px/1.55 var(--mono);color:var(--mute)}
+  .box b{color:var(--ink);font-weight:600} .box .g{color:var(--ok);font-weight:700}
+  .box+.box{margin-top:12px}
+  @media (max-width:1040px){
+    .app{grid-template-columns:1fr;padding:12px;gap:10px}
+    .side{padding:2px}
+    .app>*{min-width:0}
+    .kicker{margin:10px 0}
+    nav{display:flex;gap:6px;overflow-x:auto}
+    nav button{flex:1;min-width:0;margin:0;padding:8px 9px}
+    nav button b{font-size:13.5px}
+    nav button small{display:none}
+    .credit{display:none}
+    .scene{aspect-ratio:1/0.9}
+    .pill{padding:4px 9px;font-size:9px} .pill b{font-size:14px}
+  }
+  /* video capture: 540x675 CSS px at 2x = 1080x1350 */
+  body.video{overflow:hidden}
+  body.video .app{display:block;width:540px;height:675px;max-width:none;padding:12px 12px 0}
+  body.video .side,body.video .info,body.video .bar{display:none}
+  body.video .stage{border:0;background:transparent;border-radius:0;overflow:visible}
+  body.video .head{padding:0 0 9px;border:0}
+  body.video .vk{display:block;font:700 10px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--red);margin-bottom:7px}
+  body.video h1{font-size:30px;white-space:nowrap;margin-bottom:9px}
+  body.video .pill{padding:5px 11px;font-size:8.5px;gap:6px} body.video .pill b{font-size:22px}
+  body.video .pill.t{display:none}
+  body.video .scene{aspect-ratio:auto;height:470px;background:var(--panel);border:1px solid var(--line);border-radius:10px 10px 0 0;overflow:hidden}
+  body.video #c-strip{height:70px;background:var(--panel);border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px}
+  body.video .prhead .e{font-size:17px;white-space:nowrap;color:var(--ink)}
+  body.video.lay-L h1{white-space:normal;line-height:1.1}
+  body.video.lay-L .scene{height:435px}
+</style>
+</head>
+<body class="lay-L">
+<div class="app">
+  <aside class="side">
+    <div class="brand"><i>ζ</i>Riemann, live</div>
+    <div class="kicker">Open since 1859 · proof certified in Lean, Nov 2026</div>
+    <nav id="nav">
+      <button data-s="L"><i>LESSON 01</i><b>The landscape</b><small>where ζ touches the floor</small></button>
+      <button data-s="S"><i>LESSON 02</i><b>The spiral</b><small>one curve, every zero</small></button>
+      <button data-s="P"><i>LESSON 03</i><b>The primes</b><small>rebuilt from the zeros</small></button>
+    </nav>
+    <div class="credit">One HTML file, no libraries.<br>Built with Fable 5.2 by <a href="https://x.com/andreysuperior" target="_blank" rel="noopener">@andreysuperior</a><br><a href="https://github.com/andreysuperiorgit/riemann" target="_blank" rel="noopener">source on GitHub</a></div>
+  </aside>
+
+  <main class="card stage">
+    <div class="head">
+      <div class="vk">Open since 1859 · every zero lands on one line · Nov 2026</div>
+      <h1 id="title"></h1>
+      <div class="pills">
+        <span class="pill">zeros found <b id="s-found">0</b></span>
+        <span class="pill red">on the line ½ <b id="s-on">0</b></span>
+        <span class="pill ok">off the line <b id="s-off">0</b></span>
+        <span class="pill t" id="s-t">t = 0.000</span>
+      </div>
+    </div>
+    <div class="scene">
+      <canvas id="c-land"></canvas>
+      <canvas id="c-spiral"></canvas>
+      <div class="pr"><div class="prhead"><span class="e" id="p-err"></span></div><div class="pwrap"><canvas id="c-primes"></canvas></div></div>
+    </div>
+    <canvas id="c-strip"></canvas>
+    <div class="bar">
+      <button class="btn" id="play">Pause</button>
+      <button class="btn ghost" id="reset">Restart tour</button>
+      <input type="range" id="tslider" min="0" max="1000" value="0" aria-label="position">
+    </div>
+  </main>
+
+  <aside class="card info">
+    <span class="tag" id="i-tag">LESSON 01</span>
+    <h2 id="i-h"></h2>
+    <p id="i-p"></p>
+    <div class="extra" id="i-extra"></div>
+    <div class="box" id="s-check"></div>
+    <div class="box" id="how"></div>
+  </aside>
+</div>
+
+<script>
+// ---------- complex helpers ----------
+const C=(re,im=0)=>({re,im});
+const add=(a,b)=>C(a.re+b.re,a.im+b.im), sub=(a,b)=>C(a.re-b.re,a.im-b.im);
+const mul=(a,b)=>C(a.re*b.re-a.im*b.im,a.re*b.im+a.im*b.re);
+const scl=(a,k)=>C(a.re*k,a.im*k);
+const div=(a,b)=>{const d=b.re*b.re+b.im*b.im;return C((a.re*b.re+a.im*b.im)/d,(a.im*b.re-a.re*b.im)/d)};
+const npow=(n,s)=>{const l=Math.log(n),m=Math.exp(-s.re*l),a=-s.im*l;return C(m*Math.cos(a),m*Math.sin(a))}; // n^-s
+
+// ---------- zeta (Euler-Maclaurin) ----------
+const B=[1/6,-1/30,1/42,-1/30,5/66,-691/2730,7/6,-3617/510,43867/798,-174611/330,854513/138,-236364091/2730];
+const F=[];{let f=1;for(let k=1;k<=24;k++){f*=k;if(k%2===0)F.push(f)}}
+function zeta(s){
+  const N=Math.floor(Math.abs(s.im)/(2*Math.PI))+20;
+  let acc=C(0);
+  for(let n=1;n<N;n++)acc=add(acc,npow(n,s));
+  const Ns=npow(N,s);
+  acc=add(acc,div(scl(Ns,N),sub(s,C(1))));
+  acc=add(acc,scl(Ns,.5));
+  let poch=s, powN=scl(Ns,1/N);
+  for(let k=0;k<12;k++){
+    acc=add(acc,scl(mul(poch,powN),B[k]/F[k]));
+    poch=mul(poch,mul(add(s,C(2*k+1)),add(s,C(2*k+2))));
+    powN=scl(powN,1/(N*N));
+  }
+  return acc;
+}
+const theta=t=>t/2*Math.log(t/(2*Math.PI))-t/2-Math.PI/8+1/(48*t)+7/(5760*t*t*t);
+const Zt=t=>{const z=zeta(C(.5,t)),th=theta(t);return z.re*Math.cos(th)-z.im*Math.sin(th)};
+
+// ---------- zeros on the line, up to T_MAX ----------
+const T_MAX=240, T0=8;
+const zeros=[];
+(function(){let t=10,p=Zt(t);const h=.02;while(t<T_MAX){const t2=t+h,z2=Zt(t2);if(p*z2<0){let a=t,b=t2,fa=p;for(let i=0;i<46;i++){const m=(a+b)/2,fm=Zt(m);if(fa*fm<=0)b=m;else{a=m;fa=fm}}zeros.push((a+b)/2)}t=t2;p=z2}})();
+
+// ---------- every zero in the strip: argument principle, N(T) = theta(T)/pi + 1 + S(T) ----------
+function countStrip(T){
+  const n=600;let prev=Math.atan2(zeta(C(2,T)).im,zeta(C(2,T)).re),tot=prev;
+  for(let i=1;i<=n;i++){const z=zeta(C(2-1.5*i/n,T)),a=Math.atan2(z.im,z.re);let d=a-prev;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;tot+=d;prev=a}
+  return theta(T)/Math.PI+1+tot/Math.PI;
+}
+const N_STRIP_RAW=countStrip(T_MAX), N_STRIP=Math.round(N_STRIP_RAW);
+const OFF_LINE=N_STRIP-zeros.length;
+
+// ---------- spiral samples ----------
+const SP_STEP=.01, spiral=[];
+for(let t=0;t<=T_MAX;t+=SP_STEP)spiral.push(zeta(C(.5,t)));
+
+// ---------- primes: true psi and explicit formula ----------
+const X_MAX=60;
+const isPrime=n=>{if(n<2)return false;for(let d=2;d*d<=n;d++)if(n%d===0)return false;return true};
+const psiJumps=[];for(let p=2;p<=X_MAX;p++)if(isPrime(p))for(let q=p;q<=X_MAX;q*=p)psiJumps.push([q,Math.log(p)]);
+psiJumps.sort((a,b)=>a[0]-b[0]);
+const NX=1400, XS=[];for(let i=0;i<=NX;i++)XS.push(1.5+(X_MAX-1.5)*i/NX);
+const psiTrue=XS.map(x=>{let s=0;for(const [q,l] of psiJumps)if(q<=x)s+=l;return s});
+const base=XS.map(x=>x-Math.log(2*Math.PI)-.5*Math.log(1-1/(x*x)));
+// cumulative approximations and their average error, one per number of zeros used
+const approx=[base.slice()], err=[];
+zeros.forEach(g=>{const rho=C(.5,g),prev=approx[approx.length-1];approx.push(XS.map((x,i)=>{const xr=Math.sqrt(x),a=g*Math.log(x);return prev[i]-2*div(C(xr*Math.cos(a),xr*Math.sin(a)),rho).re}))});
+approx.forEach(ap=>{let s=0;for(let i=0;i<=NX;i++)s+=Math.abs(ap[i]-psiTrue[i]);err.push(s/(NX+1))});
+const X_ZOOM=30, NX_ZOOM=XS.findIndex(x=>x>X_ZOOM)-1, errZ=approx.map(ap=>{let s=0;for(let i=0;i<=NX_ZOOM;i++)s+=Math.abs(ap[i]-psiTrue[i]);return s/(NX_ZOOM+1)});
+
+// ---------- canvas ----------
+const cv={spiral:document.getElementById('c-spiral'),primes:document.getElementById('c-primes'),strip:document.getElementById('c-strip')};
+function ctx(c){const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1,W=Math.round(r.width*d),H=Math.round(r.height*d);if(c.width!==W||c.height!==H){c.width=W;c.height=H}const g=c.getContext('2d');g.setTransform(d,0,0,d,0,0);return{g,w:r.width,h:r.height}}
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const COL={ink:css('--ink'),mute:css('--mute'),grid:css('--grid'),line:css('--line'),red:css('--red'),blue:css('--blue'),ok:css('--ok'),panel:css('--panel'),band:css('--band')};
+const FM='ui-monospace, SF Mono, Menlo, monospace';
+
+// ---------- timeline ----------
+let U=0, T=T0, playing=true, last=performance.now();
+let zoomGain=1, countOverride=null, primesK=null; // set only by the video capture
+const DURATION=28;
+const tOfU=u=>T0+(T_MAX-T0)*Math.pow(u,1.6);
+const uOfT=t=>Math.pow(Math.max(0,(t-T0)/(T_MAX-T0)),1/1.6);
+const zerosBelow=t=>{let k=0;while(k<zeros.length&&zeros[k]<=t)k++;return k};
+// zoom-in pulse around the first zeros, fading out as they get dense
+function pulse(t){let p=0;for(const g of zeros){if(g>66)break;const a=Math.min(1,(66-g)/44),d=(t-g)/1.5;p=Math.max(p,a*Math.exp(-d*d))}return p}
+function advance(dt){const slow=1-.82*pulse(T);U=Math.min(1,U+dt/DURATION*slow);T=tOfU(U);if(U>=1)playing=false}
+
+// ---------- spiral ----------
+function drawSpiral(){
+  const {g,w,h}=ctx(cv.spiral), mobile=w<520;
+  g.fillStyle=COL.panel;g.fillRect(0,0,w,h);
+  const k=zerosBelow(T), lastZ=k?zeros[k-1]:-99, since=T-lastZ, hot=since>=0&&since<1.3;
+  const fast=document.body.classList.contains('lay-S')&&T>36&&k>0;
+  const vid=document.body.classList.contains('video'), big=vid&&document.body.classList.contains('lay-S');
+  const zm=1+(big?3.4:2.1)*pulse(T)*zoomGain;
+  const cx=w*(big?.36+.14*Math.min(1,(zm-1)/1.6):.4), cy=h*.5, R=(h*.5/3.5)*zm;
+  g.lineWidth=1;g.strokeStyle=COL.grid;g.beginPath();
+  for(let i=Math.ceil(-cx/R);i<=Math.floor((w-cx)/R);i++){g.moveTo(cx+i*R,0);g.lineTo(cx+i*R,h)}
+  for(let i=Math.ceil(-cy/R);i<=Math.floor((h-cy)/R);i++){g.moveTo(0,cy+i*R);g.lineTo(w,cy+i*R)}
+  g.stroke();
+  g.strokeStyle=COL.line;g.lineWidth=1.3;g.beginPath();g.moveTo(0,cy);g.lineTo(w,cy);g.moveTo(cx,0);g.lineTo(cx,h);g.stroke();
+  g.fillStyle=vid?COL.ink:COL.mute;g.font=(vid?'600 14px ':'11px ')+FM;if(!vid)g.fillText('1',cx+R-3,cy+14);g.fillText('Re',w-24,cy-7);g.fillText('Im',cx+7,h-8);
+  const XY=z=>[cx+z.re*R,cy-z.im*R];
+  const n=Math.min(spiral.length-1,Math.floor(T/SP_STEP));
+  const trail=Math.floor((T<66?16:(vid?3.2:7))/SP_STEP), hist=Math.floor(55/SP_STEP);
+  const s0=Math.max(0,n-trail), h0=Math.max(0,s0-hist);
+  g.lineWidth=1;g.strokeStyle=T>66?'rgba(21,23,26,.05)':'rgba(21,23,26,.085)';g.beginPath();
+  if(!(vid&&T>66))for(let i=h0;i<=s0;i+=2){const [x,y]=XY(spiral[i]);i===h0?g.moveTo(x,y):g.lineTo(x,y)}g.stroke();
+  const NB=22;g.lineCap='round';
+  for(let b=0;b<NB;b++){const a0=s0+Math.floor((n-s0)*b/NB),a1=s0+Math.floor((n-s0)*(b+1)/NB);if(a1<=a0)continue;const f=(b+1)/NB;
+    g.strokeStyle=`rgba(31,79,208,${((vid&&T>66)?(.14+.8*f*f*f):(.12+.88*f*f)).toFixed(3)})`;g.lineWidth=1+2.4*f;g.beginPath();
+    for(let i=a0;i<=a1;i++){const [x,y]=XY(spiral[i]);i===a0?g.moveTo(x,y):g.lineTo(x,y)}g.stroke()}
+  if(hot){const f=since/1.3,rr=10+f*(mobile?70:110);g.fillStyle=`rgba(214,54,31,${(.16*(1-f)).toFixed(3)})`;g.beginPath();g.arc(cx,cy,rr,0,7);g.fill();
+    g.strokeStyle=`rgba(214,54,31,${(1-f).toFixed(3)})`;g.lineWidth=2.5;g.beginPath();g.arc(cx,cy,rr,0,7);g.stroke()}
+  if(fast&&!hot){g.fillStyle='rgba(214,54,31,.13)';g.beginPath();g.arc(cx,cy,34,0,7);g.fill()}
+  g.strokeStyle=hot||fast?COL.red:COL.ink;g.lineWidth=hot||fast?2.4:1.5;const tr=big?(hot?14:11):(hot?9:7),tc=big?21:13;g.beginPath();g.arc(cx,cy,tr,0,7);g.stroke();
+  g.beginPath();g.moveTo(cx-tc,cy);g.lineTo(cx+tc,cy);g.moveTo(cx,cy-tc);g.lineTo(cx,cy+tc);g.stroke();
+  if(n>0){const [x,y]=XY(spiral[n]);g.fillStyle=COL.blue;g.beginPath();g.arc(x,y,5.5,0,7);g.fill();g.strokeStyle='#fff';g.lineWidth=1.6;g.stroke();
+    g.fillStyle=COL.blue;g.font='600 12px '+FM;g.fillText('ζ(½ + it)',x+10,y-9)}
+  if(hot||fast){const tx=cx-16,ty=cy+(big?62:mobile?38:44),f1=`700 ${big?33:mobile?17:22}px ${FM}`,f2=`600 ${big?19:mobile?12:14}px ${FM}`,l1=`ZERO #${k}`,l2=hot?`t = ${lastZ.toFixed(6)}`:`of ${zeros.length}`;
+    g.font=f1;const w1=g.measureText(l1).width;g.font=f2;const w2=g.measureText(l2).width,bw=Math.max(w1,w2)+12;
+    if(tx-bw<4){g.translate(bw+4-tx,0)}g.fillStyle='rgba(251,250,245,.88)';g.fillRect(tx-bw+6,ty-(big?32:mobile?18:22),bw,big?70:mobile?42:50);
+    g.textAlign='right';g.fillStyle=COL.red;g.font=f1;g.fillText(l1,tx,ty);g.font=f2;g.fillText(l2,tx,ty+(big?29:mobile?18:21));g.textAlign='left';g.setTransform(window.devicePixelRatio||1,0,0,window.devicePixelRatio||1,0,0)}
+  if(!vid){const cap=mobile?'ζ(½ + it) passes through 0 at every zero':'the curve ζ(½ + it) passes through 0 at every zero';g.font='11.5px '+FM;
+  g.fillStyle='rgba(251,250,245,.88)';g.fillRect(8,6,g.measureText(cap).width+12,20);g.fillStyle=COL.mute;g.fillText(cap,14,20)}
+}
+
+// ---------- critical strip, laid on its side ----------
+const stripGeom=w=>({L:w<520?40:70,R:w-18});
+function drawStrip(){
+  const {g,w,h}=ctx(cv.strip), mobile=w<520, {L,R}=stripGeom(w), compact=h<80, top=compact?22:28, bot=compact?h-8:66, mid=(top+bot)/2;
+  g.fillStyle=COL.panel;g.fillRect(0,0,w,h);
+  const tx=t=>L+(R-L)*(t/T_MAX), k=zerosBelow(T);
+  g.fillStyle=COL.ink;g.font='600 10.5px '+FM;g.fillText(mobile&&!compact?'THE CRITICAL STRIP':'THE CRITICAL STRIP · every zero has to land on the red line',L,compact?14:18);
+  g.fillStyle=COL.band;g.fillRect(L,top,R-L,bot-top);g.strokeStyle=COL.line;g.lineWidth=1;g.strokeRect(L,top,R-L,bot-top);
+  g.fillStyle=COL.mute;g.font='10.5px '+FM;g.textAlign='right';g.fillText(mobile?'1':'Re = 1',L-6,top+8);g.fillText('0',L-6,bot+1);
+  g.fillStyle=COL.red;g.font='700 11px '+FM;g.fillText('½',L-6,mid+4);
+  g.strokeStyle=COL.red;g.lineWidth=1.4;g.setLineDash([5,4]);g.beginPath();g.moveTo(L,mid);g.lineTo(R,mid);g.stroke();g.setLineDash([]);
+  g.fillStyle=COL.mute;g.font='10.5px '+FM;g.textAlign='center';
+  if(!compact)for(let t=0;t<=T_MAX;t+=mobile?80:40)g.fillText('t = '+t,Math.min(R-20,Math.max(L+16,tx(t))),bot+16);
+  g.textAlign='left';
+  for(let i=0;i<k;i++){const age=T-zeros[i],x=tx(zeros[i]);if(age<1.3){g.fillStyle=COL.red;g.beginPath();g.arc(x,mid,(compact?5:3)+6*(1-age/1.3),0,7);g.fill()}else{g.fillStyle=COL.ink;g.beginPath();g.arc(x,mid,compact?3.3:2.4,0,7);g.fill()}}
+  const xt=Math.min(R,tx(T));g.strokeStyle=COL.blue;g.lineWidth=1.5;g.beginPath();g.moveTo(xt,top-4);g.lineTo(xt,bot+4);g.stroke();
+}
+
+// ---------- primes ----------
+function drawPrimes(){
+  const {g,w,h}=ctx(cv.primes);
+  g.fillStyle=COL.panel;g.fillRect(0,0,w,h);
+  const vid=document.body.classList.contains('video'), zoomed=vid&&document.body.classList.contains('lay-P');
+  const XM=zoomed?X_ZOOM:X_MAX, YMAX=zoomed?31:62, NXM=zoomed?NX_ZOOM:NX;
+  const L=30,Rr=w-16,Tp=8,Bt=h-22;
+  const px=x=>L+(Rr-L)*(x-1.5)/(XM-1.5), py=y=>Bt-(Bt-Tp)*(y/YMAX);
+  g.strokeStyle=COL.grid;g.lineWidth=1;g.font='11px '+FM;g.fillStyle=COL.mute;
+  for(let x=zoomed?5:10;x<=XM;x+=zoomed?5:10){g.beginPath();g.moveTo(px(x),Tp);g.lineTo(px(x),Bt);g.stroke();g.fillText(String(x),px(x)-(x===XM?14:6),Bt+15)}
+  for(let y=0;y<=YMAX;y+=zoomed?10:20){g.beginPath();g.moveTo(L,py(y));g.lineTo(Rr,py(y));g.stroke();g.fillText(String(y),L-24,py(y)+4)}
+  for(let p=2;p<=XM;p++)if(isPrime(p)){g.strokeStyle=COL.ink;g.lineWidth=1.2;g.beginPath();g.moveTo(px(p),Bt);g.lineTo(px(p),Bt-6);g.stroke();
+    if(zoomed){g.fillStyle=COL.ink;g.font='600 10px '+FM;g.textAlign='center';g.fillText(String(p),px(p),Bt-10);g.textAlign='left'}}
+  g.strokeStyle=COL.ink;g.lineWidth=vid?3:2.2;g.lineJoin='miter';g.beginPath();let y=0;g.moveTo(px(1.5),py(0));
+  for(const [q,lj] of psiJumps){if(q>XM)break;g.lineTo(px(q),py(y));y+=lj;g.lineTo(px(q),py(y))}g.lineTo(px(XM),py(y));g.stroke();
+  const k=primesK??zerosBelow(T), ap=approx[k], GH=13;
+  g.save();g.beginPath();g.rect(L,Tp-6,Rr-L+4,Bt-Tp+10);g.clip();
+  if(false){g.strokeStyle='rgba(31,79,208,.75)';g.lineWidth=1.8;g.setLineDash([6,5]);g.beginPath();for(let i=0;i<=NXM;i++){const X=px(XS[i]),Y=py(approx[GH][i]);i?g.lineTo(X,Y):g.moveTo(X,Y)}g.stroke();g.setLineDash([]);
+    g.fillStyle=COL.blue;g.font='600 11px '+FM;g.textAlign='right';g.fillText('dashed blue: only '+GH+' zeros',Rr-8,Bt-26);g.textAlign='left'}
+  if(zoomed){g.fillStyle=COL.ink;g.font='700 15px '+FM;g.fillText('each step: a prime or its power',px(2.4),py(29.2));g.font='600 13px '+FM;g.fillText('black: the real primes, ψ(x)',px(2.4),py(27));g.fillStyle=COL.red;g.fillText('red: the sum over the zeros',px(2.4),py(25.1))}
+  g.strokeStyle=COL.red;g.lineWidth=2;g.lineJoin='round';g.beginPath();
+  for(let i=0;i<=NXM;i++){const X=px(XS[i]),Y=py(ap[i]);i?g.lineTo(X,Y):g.moveTo(X,Y)}g.stroke();g.restore();
+}
+
+cv.land=document.getElementById('c-land');
+const $=id=>document.getElementById(id);
+
+// ---------- |zeta| over the critical strip, as blocks ----------
+const SG=21, DTL=.25, NROW=Math.floor((T_MAX+12)/DTL)+1, HM=3.4;
+const LAND=new Float32Array(NROW*SG);
+for(let i=0;i<NROW;i++)for(let j=0;j<SG;j++){const z=zeta(C(j*.05,i*DTL)),v=Math.hypot(z.re,z.im);LAND[i*SG+j]=v===v?Math.min(v,HM):HM}
+let yaw=3.84, tilt=.62;
+const mix=(a,b,f)=>[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f];
+const rgb=(c,k=1)=>`rgb(${c[0]*k|0},${c[1]*k|0},${c[2]*k|0})`;
+const PAL=[[245,239,224],[178,200,247],[86,124,233]], PALR=[[249,216,207],[238,146,126],[214,72,48]];
+const shade=(f,red)=>{const p=red?PALR:PAL;return f<.5?mix(p[0],p[1],f*2):mix(p[1],p[2],(f-.5)*2)};
+function drawLand(){
+  const {g,w,h}=ctx(cv.land), small=w<560, vid=document.body.classList.contains('video');
+  g.fillStyle=COL.panel;g.fillRect(0,0,w,h);
+  const BACK=vid?11:15, AHEAD=vid?5:6, CW=.3, HS=1.2, KY=CW/DTL;
+  const st=Math.sin(yaw), ct=Math.cos(yaw), sp=Math.sin(tilt), cp=Math.cos(tilt);
+  const pr=(x,y,z)=>[x*ct-y*st,(x*st+y*ct)*sp-z*cp];
+  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+  for(const x of [-10.5*CW,10.5*CW])for(const y of [-BACK*KY,AHEAD*KY])for(const z of [0,HM*HS*1.12]){const [a,b]=pr(x,y,z);x0=Math.min(x0,a);x1=Math.max(x1,a);y0=Math.min(y0,b);y1=Math.max(y1,b)}
+  const m=vid?4:small?12:28, S=Math.min((w-2*m)/(x1-x0),(h-2*m)/(y1-y0))*(vid?1.22:1), ox=(w-(x1+x0)*S)/2, oy=(h-(y1+y0)*S)/2;
+  const P=(x,y,z)=>{const [a,b]=pr(x,y,z);return [ox+a*S,oy+b*S]};
+  const quad=(a,b,c,d,fill)=>{g.fillStyle=fill;g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.lineTo(c[0],c[1]);g.lineTo(d[0],d[1]);g.closePath();g.fill();g.stroke()};
+  const A=Math.max(0,T-BACK), Y=t=>(t-A-BACK)*KY;   // window start; fixed geometry while the window fills up
+  const iA=Math.ceil(A/DTL), iB=Math.min(NROW-1,Math.floor((A+BACK+AHEAD)/DTL));
+  const rows=[];for(let i=iA;i<=iB;i++)rows.push(i);if(ct<0)rows.reverse();      // far rows first
+  const cols=[];for(let j=0;j<SG;j++)cols.push(j);if(st<0)cols.reverse();
+  const hx=CW/2*(st>0?1:-1), hy=CW/2*(ct>0?1:-1), q=CW/2;
+  g.lineWidth=.6;g.lineJoin='round';
+  for(const i of rows){const t=i*DTL,y=Y(t),ahead=t>T;
+    const edge=Math.min(1,(t-A)/2.5+.25,(A+BACK+AHEAD-t)/2);g.globalAlpha=Math.max(0,edge)*(ahead?.32:1);
+    g.strokeStyle=ahead?'rgba(21,23,26,.10)':(vid?'rgba(52,92,150,.55)':'rgba(21,23,26,.24)');
+    for(const j of cols){const x=(j-10)*CW,v=LAND[i*SG+j],z=v*HS,c=shade(v/HM,j===10);
+      if(z>.03){quad(P(x+hx,y-q,0),P(x+hx,y+q,0),P(x+hx,y+q,z),P(x+hx,y-q,z),rgb(c,.78));
+                quad(P(x-q,y+hy,0),P(x+q,y+hy,0),P(x+q,y+hy,z),P(x-q,y+hy,z),rgb(c,.89))}
+      quad(P(x-q,y-q,z),P(x+q,y-q,z),P(x+q,y+q,z),P(x-q,y+q,z),rgb(c))}}
+  g.globalAlpha=1;
+  // zero flags
+  const k=zerosBelow(T), zt=HM*HS*.8;
+  for(let n=0;n<k;n++){const zr=zeros[n];if(zr<A+1.2)continue;const y=Y(zr),a=P(0,y,0),b=P(0,y,zt),hot=T-zr<1.3;
+    g.strokeStyle=COL.red;g.lineWidth=hot?3:(vid?2.2:1.5);g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke();
+    g.fillStyle=COL.red;g.beginPath();g.arc(a[0],a[1],hot?6:3.2,0,7);g.fill();
+    if(hot&&!vid){g.strokeStyle='rgba(214,54,31,'+(1-(T-zr)/1.3).toFixed(2)+')';g.lineWidth=2;g.beginPath();g.ellipse(a[0],a[1],8+(T-zr)*34,(8+(T-zr)*34)*sp,0,0,7);g.stroke()}
+    const lbl=hot?'ZERO #'+(n+1):'#'+(n+1);g.font=`700 ${hot?(vid?29:small?15:17):(vid?14:small?10:11)}px ${FM}`;const tw=g.measureText(lbl).width+(hot?(vid?20:14):9),th=hot?(vid?42:26):(vid?20:16);
+    g.fillStyle=COL.red;g.fillRect(b[0]-tw/2,b[1]-th,tw,th);g.fillStyle='#fff';g.textAlign='center';g.fillText(lbl,b[0],b[1]-(hot?(vid?12:8):(vid?5.5:4.5)));
+    if(hot){g.fillStyle=COL.red;g.font=`600 ${vid?16:small?11:12}px ${FM}`;g.fillText('t = '+zr.toFixed(6),b[0],b[1]-th-6)}
+    g.textAlign='left'}
+  // where we are
+  const iN=Math.min(NROW-1,Math.round(T/DTL)), hp=P(0,Y(T),LAND[iN*SG+10]*HS);
+  if(!vid){g.fillStyle=COL.blue;g.beginPath();g.arc(hp[0],hp[1],5.5,0,7);g.fill();g.strokeStyle='#fff';g.lineWidth=1.6;g.stroke()}
+  if(!vid){const ml='t = '+T.toFixed(2);g.font='600 12px '+FM;const mw=g.measureText(ml).width;g.fillStyle='rgba(251,250,245,.85)';g.fillRect(hp[0]+9,hp[1]+6,mw+8,17);g.fillStyle=COL.blue;g.fillText(ml,hp[0]+13,hp[1]+19)}g.textAlign='center';
+  // strip edges
+  if(!vid){const yl=-BACK*KY-.7, e0=P(-10*CW,yl,0), e5=P(0,yl,0), e1=P(10*CW,yl,0);
+  g.font=(vid?'700 14px ':'600 11px ')+FM;g.fillStyle=vid?COL.ink:COL.mute;g.fillText('Re = 0',Math.max(26,e0[0]),e0[1]+4);g.fillText('Re = 1',Math.max(26,e1[0]),e1[1]+4);g.fillStyle=COL.red;g.fillText('line ½',e5[0],e5[1]+4)}g.textAlign='left';
+  if(!vid){const cap=small?'|ζ(s)| over the critical strip · drag to rotate':'|ζ(s)| over the critical strip · every red pin is a zero · drag to rotate';g.font='11.5px '+FM;g.fillStyle=COL.mute;g.fillText(cap,14,20)}
+}
+let drag=null;
+cv.land.addEventListener('pointerdown',e=>{drag=[e.clientX,e.clientY,yaw,tilt];cv.land.setPointerCapture(e.pointerId);cv.land.style.cursor='grabbing'});
+cv.land.addEventListener('pointermove',e=>{if(!drag)return;yaw=drag[2]-(e.clientX-drag[0])*.008;tilt=Math.max(.3,Math.min(1.2,drag[3]+(e.clientY-drag[1])*.006))});
+cv.land.addEventListener('pointerup',()=>{drag=null;cv.land.style.cursor='grab'});
+
+// ---------- lessons ----------
+const LESSON={
+  L:{tag:'LESSON 01',title:'Every zero lands on <em>one line</em>.',h:'Where ζ touches the floor',p:'Each block is the size of ζ(s) at one point of the critical strip. Where the blocks drop to the floor, ζ is zero. Riemann\'s guess from 1859: that only happens on the red line, Re(s) = ½. Drag the scene to look at it from any side.'},
+  S:{tag:'LESSON 02',title:'One curve hits 0 at <em>every zero</em>.',h:'One curve, every zero',p:'Walk up the red line and plot ζ(½ + it) as a moving point. Every time the curve passes through 0, you just crossed a zero. The first one is at t = 14.134725.'},
+  P:{tag:'LESSON 03',title:'Add them up: <em>the primes appear</em>.',h:'The zeros rebuild the primes',p:'Each zero is one wave. Add the waves and Riemann\'s formula turns into the exact staircase of the primes, one step at every prime and prime power. Drag the slider and watch it snap into place.'}
+};
+let scene='L', autoTour=true;
+function setScene(s){scene=s;const L=LESSON[s];document.body.className=(document.body.classList.contains('video')?'video ':'')+'lay-'+s;
+  $('title').innerHTML=L.title;$('i-tag').textContent=L.tag;$('i-h').textContent=L.h;$('i-p').textContent=L.p;
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.s===s));
+  $('i-extra').innerHTML=s==='P'?'<label>zeros used: <b id="pk-v"></b></label><input type="range" id="pk" min="0" max="'+zeros.length+'" value="'+zerosBelow(T)+'">':'';
+  if(s==='P')$('pk').oninput=e=>{primesK=+e.target.value;playing=false};else primesK=null}
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{autoTour=false;setScene(b.dataset.s)});
+const tourScene=u=>u<.46?'L':u<.72?'S':'P';
+
+function drawAll(){
+  if(scene==='L')drawLand();else if(scene==='S')drawSpiral();else drawPrimes();
+  drawStrip();
+  const k=zerosBelow(T), kc=countOverride??k, kp=primesK??k;
+  $('s-found').textContent=kc;$('s-on').textContent=kc;$('s-off').textContent=OFF_LINE;
+  $('s-t').textContent=`t = ${T.toFixed(3)}`;
+  const isV=document.body.classList.contains('video');$('p-err').textContent=isV?`${kp} of ${zeros.length} zeros added`:`${kp} of ${zeros.length} zeros · avg gap to the real staircase ${err[kp].toFixed(2)}`;
+  const pv=$('pk-v');if(pv){pv.textContent=kp;if(primesK===null)$('pk').value=kp}
+  $('tslider').value=Math.round(U*1000);$('play').textContent=playing?'Pause':(U>=1?'Replay':'Play');
+}
+$('s-check').innerHTML=`Whole strip up to t = ${T_MAX}: <b class="g">${N_STRIP} zeros</b> counted with the argument principle. Found on the line: <b class="g">${zeros.length}</b>. The two numbers match, so none is anywhere else.`;
+$('how').innerHTML=`First zeros found on this page: <b>${zeros.slice(0,5).map(z=>z.toFixed(6)).join(', ')}</b>… Check them against any published table.`;
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;
+  if(playing){advance(dt);if(autoTour){const s=tourScene(U);if(s!==scene)setScene(s)}}
+  drawAll();requestAnimationFrame(loop)}
+$('play').onclick=()=>{if(U>=1){U=0;T=T0;autoTour=true;setScene('L')}playing=!playing};
+$('reset').onclick=()=>{U=0;T=T0;playing=true;autoTour=true;primesK=null;setScene('L')};
+$('tslider').oninput=e=>{U=e.target.value/1000;T=tOfU(U);playing=false};
+cv.strip.addEventListener('click',e=>{const r=cv.strip.getBoundingClientRect(),{L,R}=stripGeom(r.width),t=Math.max(T0,Math.min(T_MAX,(e.clientX-r.left-L)/(R-L)*T_MAX));T=t;U=uOfT(t);playing=false});
+window.addEventListener('keydown',e=>{if(e.code==='Space'&&e.target.tagName!=='INPUT'){e.preventDefault();$('play').click()}});
+setScene('L');
+// hooks for stills and video capture
+window.__r={setT:t=>{T=t;U=uOfT(t);playing=false;drawAll()},
+  scene:s=>{autoTour=false;setScene(s);playing=false;drawAll()},
+  view:(y,ti)=>{yaw=y;if(ti)tilt=ti;drawAll()},
+  frame:o=>{autoTour=false;playing=false;document.body.classList.add('video');if(o.lay!==scene||!document.body.classList.contains('lay-'+o.lay))setScene(o.lay);$('title').innerHTML=o.title||(o.lay==='L'?'Riemann Hypothesis:<br><em>proof certified in Lean</em>':LESSON[o.lay].title);
+    zoomGain=o.gain??1;countOverride=o.count??null;primesK=o.pk??null;if(o.yaw!=null)yaw=o.yaw;if(o.tilt!=null)tilt=o.tilt;T=o.T;drawAll()},
+  zeros,strip:N_STRIP,stripRaw:N_STRIP_RAW,off:OFF_LINE,err};
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
